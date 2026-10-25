@@ -1,0 +1,94 @@
+schema_version: 1
+
+experiment:
+  name: official_manuscript_baseline
+  description: >
+    Canonical post-processing and test-set evaluation configuration
+    reported in the manuscript.
+
+dataset:
+  total_phrases: 12000
+  train_phrases: 9600
+  validation_phrases: 1200
+  test_phrases: 1200
+
+  phrase_audio:
+    channels: 1
+    encoding: PCM16
+    sampling_rate_hz: 12000
+
+  classes:
+    - KD
+    - SD
+    - T12
+    - T14
+    - T16
+
+postprocessing:
+  decision_threshold: 0.030
+  nms_window_ms: 110
+
+evaluation:
+  onset_matching_tolerance_ms: 50
+  evaluation_split: test
+
+test_results:
+  global:
+    true_positives: 8657
+    false_positives: 6901
+    false_negatives: 5315
+
+    micro_precision: 0.5564
+    micro_recall: 0.6196
+    micro_f1: 0.5863
+    macro_f1: 0.5855
+
+  per_class:
+    KD:
+      true_positives: 3640
+      false_positives: 3698
+      false_negatives: 1251
+      precision: 0.4960
+      recall: 0.7442
+      f1: 0.5953
+
+    SD:
+      true_positives: 2533
+      false_positives: 1413
+      false_negatives: 2357
+      precision: 0.6419
+      recall: 0.5180
+      f1: 0.5733
+
+    T12:
+      true_positives: 820
+      false_positives: 604
+      false_negatives: 577
+      precision: 0.5758
+      recall: 0.5870
+      f1: 0.5814
+
+    T14:
+      true_positives: 750
+      false_positives: 618
+      false_negatives: 647
+      precision: 0.5482
+      recall: 0.5369
+      f1: 0.5425
+
+    T16:
+      true_positives: 914
+      false_positives: 568
+      false_negatives: 483
+      precision: 0.6167
+      recall: 0.6543
+      f1: 0.6349
+
+notes:
+  - >
+    The global threshold of 0.030 was selected using validation-set
+    behavior and applied unchanged to the independent test split.
+  - >
+    This file records the official baseline reported in the manuscript.
+    Later exploratory threshold or class-specific calibration studies are
+    intentionally excluded.
