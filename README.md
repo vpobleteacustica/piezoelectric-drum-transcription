@@ -94,7 +94,7 @@ This repository will contain the code and lightweight reproducibility resources 
 For the manuscript release, this repository will distinguish between:
 
 - the immutable dataset archive used for the reported experiments;
-- the exact code and configuration used for the official baseline;
+- preserved source snapshots and the canonical configuration associated with the official baseline;
 - audit outputs documenting dataset integrity and annotation consistency; and
 - subsequent exploratory or development work.
 

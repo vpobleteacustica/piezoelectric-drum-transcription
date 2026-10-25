@@ -139,12 +139,22 @@ From a clean working directory:
 The resulting 34 Python files were verified byte-for-byte against the ADTOF
 tree used in the canonical thesis experiment.
 
-## 5. Preserved canonical pipeline source
+## 5. Preserved pipeline source snapshot
 
-The exact historical source files supporting the canonical training and
-full-track evaluation pipeline are preserved under:
+The finalized publication-oriented source snapshot for the training,
+calibration, and analysis pipeline is preserved under:
 
     provenance/canonical_pipeline/source/
+
+These files come from the finalized `official/v0.1-vibro5-pipeline` source
+snapshot at commit:
+
+    327b972d273961df455d591321d383ce5d19bacd
+
+They provide the canonical release implementation used to inspect and
+reconstruct the pipeline. The preserved training launcher is not claimed to
+be the exact intermediate working-tree revision that launched the canonical
+training run on 2026-06-28; that distinction is documented below.
 
 They include:
 
@@ -153,7 +163,8 @@ They include:
     SCRIPTS/analysis/analyze_run_errors.py
     SCRIPTS/common/dataset_roots.py
 
-These files are preserved verbatim rather than rewritten for publication.
+These files are preserved verbatim from the finalized source snapshot rather
+than rewritten for publication.
 
 Their SHA-256 values are:
 
@@ -210,18 +221,42 @@ The manuscript baseline uses:
 | Class-weight order | KD, SD, T12, T14, T16 |
 | Onset tolerance | 50 ms |
 
-### Historical-command limitation
+### Historical training-source and command limitation
 
-No preserved artifact has yet been identified that establishes the literal
-shell command originally executed to launch this run.
+The canonical run configuration records an execution time of
+`2026-06-28T21:10:05.326114-04:00`.
 
-Therefore, commands later provided for rerunning the training stage must be
-described as **reconstructed reproduction commands derived from the preserved
-configuration and command-line interface**, not as verbatim historical
-commands.
+Git history brackets that execution between:
 
-The preserved configuration, source files, environment, checkpoint, and
-result artifacts remain the authority for the reported experiment.
+- `60b0960106046310eac5ca73920bb77372478a22`
+  (`2026-06-21 20:42:21 -0400`), and
+- `df7d06bd1ba53a2c68d55e996ed39f72ca653ed9`
+  (`2026-07-21 00:04:17 -0400`).
+
+The earlier committed training launcher does not yet contain the complete
+class-weight and VAL-calibration behavior recorded by the canonical run,
+whereas the later finalized launcher additionally records loss-selection
+fields that are absent from the canonical run configuration. This establishes
+that the run was produced from an intermediate working-tree revision that was
+not preserved as a Git commit.
+
+A local Git forensic check using unreachable objects found no recoverable
+intermediate blob for that launcher.
+
+Importantly, the complete tracked `adtof/` tree (37 files) is byte-identical
+between the two commits bracketing the run. The ADTOF adaptation is therefore
+stable across that interval; the unresolved provenance is limited to the
+project-specific training launcher revision.
+
+No preserved artifact establishes the literal shell command originally
+executed to launch the run. Therefore, any command provided for rerunning the
+training stage must be described as a **reconstructed reproduction command
+derived from the preserved run configuration and compatible command-line
+interface**, not as a verbatim historical command.
+
+For the reported experiment, the preserved run configuration, checkpoint,
+training history, postprocessing-selection artifacts, and final metrics remain
+the primary authorities.
 
 ## 8. Canonical checkpoint
 
