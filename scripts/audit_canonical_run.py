@@ -15,7 +15,13 @@ ROOT = REPO_ROOT / "provenance" / "canonical_run"
 
 TRAINING = ROOT / "training" / "config.json"
 CHECKPOINT_META = ROOT / "checkpoint" / "checkpoint_metadata.json"
-CHECKPOINT = ROOT / "checkpoint" / "best_weights.weights.h5"
+BEST_CHECKPOINT = ROOT / "checkpoint" / "best_weights.weights.h5"
+FINAL_CHECKPOINT = ROOT / "checkpoint" / "final_weights.weights.h5"
+CHECKPOINT_SELECTION = (
+    ROOT
+    / "fulltrack"
+    / "fulltrack_checkpoint_selection_from_val.json"
+)
 
 VAL_SELECTION = (
     ROOT
@@ -39,9 +45,13 @@ EXPECTED_CLASSES = ["KD", "SD", "T12", "T14", "T16"]
 EXPECTED_MIDI = [35, 38, 47, 45, 43]
 EXPECTED_WEIGHTS = [1.0, 1.0, 1.2, 1.5, 1.7]
 
-EXPECTED_CHECKPOINT_SHA256 = (
+EXPECTED_BEST_CHECKPOINT_SHA256 = (
     "a45d9d0e21a46e477573f8aad36c9858"
     "223be1a72cef7116ba25ce4c2ddf878d"
+)
+EXPECTED_FINAL_CHECKPOINT_SHA256 = (
+    "39c5c4d3b972423f5da60221da9358a6"
+    "66e3c3d7630a7267edcc80fe82a054e9"
 )
 
 
@@ -68,6 +78,7 @@ def close(a, b, tol: float = 1e-12) -> bool:
 def main() -> None:
     training = load_json(TRAINING)
     checkpoint_meta = load_json(CHECKPOINT_META)
+    checkpoint_selection = load_json(CHECKPOINT_SELECTION)
     val_selection = load_json(VAL_SELECTION)
     inference = load_json(INFERENCE)
 
@@ -162,6 +173,27 @@ def main() -> None:
     )
 
     print("\n=== 3. VAL-ONLY POSTPROCESSING SELECTION ===")
+
+    check(
+        checkpoint_selection["checkpoints_evaluated"] == ["best", "final"],
+        "full-track calibration evaluated best and final checkpoints",
+    )
+    check(
+        checkpoint_selection["selection_split"] == "VAL",
+        "checkpoint selection split = VAL",
+    )
+    check(
+        checkpoint_selection["selection_metric"] == "f1",
+        "checkpoint selection metric = f1",
+    )
+    check(
+        checkpoint_selection["selected_checkpoint"] == "best",
+        "pre-NMS full-track selection chose best checkpoint",
+    )
+    check(
+        close(checkpoint_selection["selected_global_threshold"], 0.04),
+        "pre-NMS full-track global threshold = 0.04",
+    )
 
     check(
         val_selection["selection_split"] == "VAL",
@@ -383,12 +415,19 @@ def main() -> None:
 
     print("\n=== 7. CHECKPOINT IDENTITY ===")
 
-    digest = hashlib.sha256(CHECKPOINT.read_bytes()).hexdigest()
-    print(f"checkpoint SHA-256 = {digest}")
+    best_digest = hashlib.sha256(BEST_CHECKPOINT.read_bytes()).hexdigest()
+    final_digest = hashlib.sha256(FINAL_CHECKPOINT.read_bytes()).hexdigest()
+
+    print(f"best checkpoint SHA-256  = {best_digest}")
+    print(f"final checkpoint SHA-256 = {final_digest}")
 
     check(
-        digest == EXPECTED_CHECKPOINT_SHA256,
-        "checkpoint SHA-256 matches canonical source",
+        best_digest == EXPECTED_BEST_CHECKPOINT_SHA256,
+        "best checkpoint SHA-256 matches canonical source",
+    )
+    check(
+        final_digest == EXPECTED_FINAL_CHECKPOINT_SHA256,
+        "final checkpoint SHA-256 matches canonical source",
     )
 
     print("\n=== RESULT ===")
