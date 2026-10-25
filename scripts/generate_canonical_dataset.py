@@ -12,6 +12,7 @@ import argparse
 import json
 import os
 import shlex
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -32,6 +33,8 @@ GENERATOR_PATH = (
     / "phrase_generator.py"
 )
 GENERATOR_ROOT = GENERATOR_PATH.parents[1]
+INTERNAL_SAMPLES_DIR = GENERATOR_ROOT / "MUESTRAS"
+SOURCE_CLASSES = ("KD", "SD", "T12", "T14", "T16")
 
 
 def parse_args() -> argparse.Namespace:
@@ -46,10 +49,10 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         required=True,
         help=(
-            "Directory containing the isolated vibration-hit source samples. "
-            "For provenance compatibility, this path must be located under "
-            "src/dataset_generator (normally src/dataset_generator/MUESTRAS). "
-            "That directory may be a symlink to separately archived data."
+            "Directory containing the original isolated vibration-hit source "
+            "samples, with KD/SD/T12/T14/T16 subdirectories. The wrapper "
+            "creates a temporary provenance-compatible view under "
+            "src/dataset_generator/MUESTRAS."
         ),
     )
     parser.add_argument(
@@ -101,22 +104,49 @@ def lexical_absolute(path: Path) -> Path:
     return Path(os.path.abspath(os.fspath(path.expanduser())))
 
 
-def validate_samples_location(samples_dir: Path) -> Path:
-    """Keep source paths compatible with the preserved generator metadata."""
+def validate_source_samples(samples_dir: Path) -> Path:
+    """Validate the externally stored isolated-hit source corpus."""
     samples_dir = lexical_absolute(samples_dir)
 
-    try:
-        samples_dir.relative_to(GENERATOR_ROOT)
-    except ValueError as exc:
-        raise ValueError(
-            "The preserved generator records each source WAV relative to "
-            f"{GENERATOR_ROOT}. Therefore --samples-dir must be located "
-            "under src/dataset_generator. Use "
-            "src/dataset_generator/MUESTRAS directly, or make that path "
-            "a symlink to the separately archived source samples."
-        ) from exc
+    if not samples_dir.is_dir():
+        raise FileNotFoundError(
+            f"Source-sample directory not found: {samples_dir}"
+        )
+
+    missing = [
+        name for name in SOURCE_CLASSES
+        if not (samples_dir / name).is_dir()
+    ]
+    if missing:
+        raise FileNotFoundError(
+            "Source-sample corpus is missing class directories: "
+            + ", ".join(missing)
+        )
 
     return samples_dir
+
+
+def create_samples_view(source_samples: Path) -> Path:
+    """Expose source classes under the path expected by preserved metadata."""
+    if INTERNAL_SAMPLES_DIR.exists() or INTERNAL_SAMPLES_DIR.is_symlink():
+        raise FileExistsError(
+            "Temporary canonical samples path already exists: "
+            f"{INTERNAL_SAMPLES_DIR}"
+        )
+
+    INTERNAL_SAMPLES_DIR.mkdir()
+
+    try:
+        for name in SOURCE_CLASSES:
+            (INTERNAL_SAMPLES_DIR / name).symlink_to(
+                source_samples / name,
+                target_is_directory=True,
+            )
+    except Exception:
+        shutil.rmtree(INTERNAL_SAMPLES_DIR)
+        raise
+
+    return INTERNAL_SAMPLES_DIR
 
 
 def build_command(
@@ -125,7 +155,7 @@ def build_command(
     output_root: Path,
 ) -> list[str]:
     split_sizes = config["split_sizes"]
-    samples_dir = validate_samples_location(samples_dir)
+    samples_dir = lexical_absolute(samples_dir)
 
     command = [
         sys.executable,
@@ -179,21 +209,18 @@ def main() -> None:
             f"Preserved dataset generator not found: {GENERATOR_PATH}"
         )
 
-    samples_dir = validate_samples_location(args.samples_dir)
-
-    if not args.dry_run and not samples_dir.is_dir():
-        raise FileNotFoundError(
-            f"Source-sample directory not found: {samples_dir}"
-        )
+    source_samples = validate_source_samples(args.samples_dir)
 
     command = build_command(
         config=config,
-        samples_dir=samples_dir,
+        samples_dir=INTERNAL_SAMPLES_DIR,
         output_root=args.output_root,
     )
 
     print(f"Canonical config: {CONFIG_PATH.relative_to(REPO_ROOT)}")
     print(f"Generator: {GENERATOR_PATH.relative_to(REPO_ROOT)}")
+    print(f"External source samples: {source_samples}")
+    print(f"Temporary canonical samples view: {INTERNAL_SAMPLES_DIR}")
     print("Command:")
     print(shlex.join(command))
 
@@ -201,7 +228,12 @@ def main() -> None:
         print("Dry run only; dataset generation was not started.")
         return
 
-    subprocess.run(command, cwd=REPO_ROOT, check=True)
+    samples_view = create_samples_view(source_samples)
+    try:
+        subprocess.run(command, cwd=REPO_ROOT, check=True)
+    finally:
+        shutil.rmtree(samples_view)
+        print(f"Removed temporary samples view: {samples_view}")
 
 
 if __name__ == "__main__":
