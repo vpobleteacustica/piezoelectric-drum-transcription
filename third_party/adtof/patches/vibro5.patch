@@ -1,0 +1,190 @@
+diff --git a/adtof/config.py b/adtof/config.py
+index 5c493a7..47a654b 100644
+--- a/adtof/config.py
++++ b/adtof/config.py
+@@ -203,6 +203,11 @@ LABELS_5 = [35, 38, 47, 42, 49]
+ LABELS_5TXT = ["BD", "SD", "TT", "HH", "CY+RD"]
+ LABELS_3 = [35, 38, 42]
+ 
++# Separate 5-class vocabulary for the vibration/piezo dataset.
++VIBRO_LABELS_5 = [35, 38, 47, 45, 43]
++VIBRO_LABELS_5TXT = ["KD", "SD", "T12", "T14", "T16"]
++VIBRO_WEIGHTS_5 = [1.0, 1.0, 1.0, 1.0, 1.0]
++
+ # Vogl weights Bass drum (1.0), snare drum (4.0), and hi-hat (1.5)
+ # Our set of weights computed with the approach from https://markcartwright.com/files/cartwright2018increasing.pdf section 3.4.1 Task weights
+ # Compute the inverse estimated entropy of each label activity distribution
+diff --git a/adtof/io/mir.py b/adtof/io/mir.py
+index ccd4ead..499f164 100644
+--- a/adtof/io/mir.py
++++ b/adtof/io/mir.py
+@@ -1,11 +1,22 @@
+-from distutils.command.config import config
+ import logging
+ import pickle
++import collections
++import collections.abc
++from distutils.command.config import config
++
++import numpy as np
++
++for _legacy_name in ("MutableSequence", "MutableMapping", "Mapping", "Sequence", "Iterable"):
++    if not hasattr(collections, _legacy_name):
++        setattr(collections, _legacy_name, getattr(collections.abc, _legacy_name))
++
++for _legacy_name, _replacement in (("float", float), ("int", int), ("complex", complex)):
++    if not hasattr(np, _legacy_name):
++        setattr(np, _legacy_name, _replacement)
+ 
+ import librosa
+ import madmom
+ import matplotlib.pyplot as plt
+-import numpy as np
+ from adtof import config
+ 
+ from madmom.audio.filters import LogarithmicFilterbank
+diff --git a/adtof/model/dataLoader.py b/adtof/model/dataLoader.py
+index 19787ca..cc5c07f 100644
+--- a/adtof/model/dataLoader.py
++++ b/adtof/model/dataLoader.py
+@@ -367,6 +367,91 @@ class DataLoader(object):
+ 
+         return solo, acc
+ 
++    @classmethod
++    def getCustomSplit(cls, folderPath=None, customDatasetRoot=None, cachePreprocessFolders=None, **kwargs):
++        """
++        Load a pre-split custom dataset with the structure:
++        TRAIN/AUDIO, TRAIN/ANNOTATIONS, VAL/AUDIO, VAL/ANNOTATIONS, TEST/AUDIO, TEST/ANNOTATIONS.
++        Audio and annotation files are paired by basename.
++        """
++        datasetRoot = customDatasetRoot or folderPath
++        if datasetRoot is None:
++            raise ValueError("custom_split requires folderPath or customDatasetRoot")
++
++        datasetRoot = os.path.abspath(datasetRoot)
++        splitNames = ("TRAIN", "VAL", "TEST")
++        audioPaths = []
++        annotationPaths = []
++        splitIndexes = {}
++
++        for splitName in splitNames:
++            splitAudioPaths, splitAnnotationPaths = cls._scanCustomSplit(datasetRoot, splitName)
++            startIndex = len(audioPaths)
++            audioPaths.extend(splitAudioPaths)
++            annotationPaths.extend(splitAnnotationPaths)
++            splitIndexes[splitName] = list(range(startIndex, len(audioPaths)))
++            logging.info("custom_split %s tracks: %s", splitName, len(splitAudioPaths))
++
++        if not audioPaths:
++            raise ValueError("custom_split found no paired WAV/TXT files under {}".format(datasetRoot))
++
++        if cachePreprocessFolders is None:
++            cachePreprocessFolders = os.path.join(datasetRoot, "PREPROCESS")
++
++        kwargs.setdefault("labels", config.VIBRO_LABELS_5)
++        kwargs.setdefault("sampleWeight", config.VIBRO_WEIGHTS_5)
++        kwargs.setdefault("mappingDictionaries", [instrumentsMapping.MIDI_VIBRO_5])
++        kwargs.setdefault("sep", "\t")
++
++        dataset = cls(
++            audioPaths,
++            annotationPaths=annotationPaths,
++            cachePreprocessFolders=cachePreprocessFolders,
++            checkFilesNameMatch=False,
++            crossValidation=False,
++            **kwargs,
++        )
++        dataset.trainIndexes = np.array(splitIndexes["TRAIN"])
++        dataset.valIndexes = np.array(splitIndexes["VAL"])
++        dataset.testIndexes = np.array(splitIndexes["TEST"])
++        dataset.groups = [config.getFileBasename(path) for path in dataset.audioPaths]
++        dataset.keptGroups = dataset.groups
++
++        return dataset
++
++    @classmethod
++    def _scanCustomSplit(cls, datasetRoot, splitName):
++        audioFolder = os.path.join(datasetRoot, splitName, "AUDIO")
++        annotationFolder = os.path.join(datasetRoot, splitName, "ANNOTATIONS")
++
++        if not os.path.isdir(audioFolder):
++            logging.warning("custom_split %s missing AUDIO folder: %s", splitName, audioFolder)
++            return [], []
++        if not os.path.isdir(annotationFolder):
++            logging.warning("custom_split %s missing ANNOTATIONS folder: %s", splitName, annotationFolder)
++            return [], []
++
++        audioByBaseName = {
++            config.getFileBasename(path): path
++            for path in sorted(glob.glob(os.path.join(audioFolder, "*")))
++            if os.path.splitext(path)[1].lower() == ".wav"
++        }
++        annotationByBaseName = {
++            config.getFileBasename(path): path
++            for path in sorted(glob.glob(os.path.join(annotationFolder, "*")))
++            if os.path.splitext(path)[1].lower() == ".txt"
++        }
++
++        missingAnnotations = sorted(set(audioByBaseName) - set(annotationByBaseName))
++        missingAudio = sorted(set(annotationByBaseName) - set(audioByBaseName))
++        for basename in missingAnnotations:
++            logging.warning("custom_split %s orphan audio without annotation: %s", splitName, audioByBaseName[basename])
++        for basename in missingAudio:
++            logging.warning("custom_split %s orphan annotation without audio: %s", splitName, annotationByBaseName[basename])
++
++        pairedBaseNames = sorted(set(audioByBaseName) & set(annotationByBaseName))
++        return [audioByBaseName[name] for name in pairedBaseNames], [annotationByBaseName[name] for name in pairedBaseNames]
++
+     @classmethod
+     def factoryMixedDatasets(cls, folderPath: str, testFold=0, scenario="all", regulateSamplingProbability=1, dataAugmentation=False, **kwargs):
+         """returns all the access function required to train/validate/test on mixed datasets
+@@ -376,7 +461,13 @@ class DataLoader(object):
+         folderPath : path to the root folder of the ADTOF dataset
+         """
+         # Load all the different datasets
+-        datasets = cls.getAllDatasets(folderPath, testFold, scenario=scenario, **kwargs)
++        if scenario == "custom_split":
++            kwargs.setdefault("labels", config.VIBRO_LABELS_5)
++            kwargs.setdefault("sampleWeight", config.VIBRO_WEIGHTS_5)
++            kwargs.setdefault("mappingDictionaries", [instrumentsMapping.MIDI_VIBRO_5])
++            datasets = {"custom_split": cls.getCustomSplit(folderPath, **kwargs)}
++        else:
++            datasets = cls.getAllDatasets(folderPath, testFold, scenario=scenario, **kwargs)
+ 
+         # Specify datasets used for training, validation and testing
+         if scenario == "public":
+@@ -422,6 +513,9 @@ class DataLoader(object):
+             trainingSetsCardinality = [1, 1, 1]  # Same probability for all datasets to reproduce Cartwright's results
+             validationSets = ["adtof_yt", "adtof_F70", "tmidt_acc"]
+             validationSetsPickCardinality = [1, 1, 1]
++        elif scenario == "custom_split":
++            trainingSets = "custom_split"
++            validationSets = "custom_split"
+         elif scenario == "all":
+             trainingSets = ["adtof_yt", "adtof_F70", "rbma", "enst_wet", "enst_sum", "mdb_full_mix", "mdb_drum_solo"]
+             trainingSetsCardinality = [208.40, 94.09, 1.72, 0.35, 0.35, 1.02, 1.02]
+diff --git a/adtof/ressources/instrumentsMapping.py b/adtof/ressources/instrumentsMapping.py
+index 30919ef..7c77a39 100644
+--- a/adtof/ressources/instrumentsMapping.py
++++ b/adtof/ressources/instrumentsMapping.py
+@@ -111,6 +111,19 @@ MIDI_REDUCED_5 = update(  # Adding TT and CY + RD
+     },
+     MIDI_REDUCED_3,
+ )
++
++# Preserve the five separate vibration/piezo dataset classes.
++MIDI_VIBRO_5 = {
++    35: 35,  # KD
++    36: 35,  # Alternate kick
++    38: 38,  # SD
++    40: 38,  # Alternate snare
++    47: 47,  # T12
++    45: 45,  # T14
++    43: 43,  # T16
++}
++VIBRO_MIDI_5 = MIDI_VIBRO_5
++
+ MIDI_REDUCED_6 = update(  # Splitting CY and RD
+     {
+         51: 51,  # Ride Cymbal 1
