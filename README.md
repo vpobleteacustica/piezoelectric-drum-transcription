@@ -100,6 +100,8 @@ For the manuscript release, this repository will distinguish between:
 
 The submission release will be tagged so that the version cited by the manuscript remains recoverable even if development continues.
 
+The complete canonical reproducibility chain, including the distinction between preserved historical evidence and reconstructed reproduction procedures, is documented in [`docs/REPRODUCIBILITY.md`](docs/REPRODUCIBILITY.md).
+
 ## Relationship to the development repository
 
 The original thesis-development repository documents the historical replication and adaptation of ADTOF and contains material created during the research process. This companion repository is a curated publication artifact and should be used when reproducing or citing the manuscript results.
