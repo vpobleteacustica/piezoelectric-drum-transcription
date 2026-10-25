@@ -1,0 +1,28 @@
+cff-version: 1.2.0
+message: "If you use this repository, please cite the associated manuscript and the archived software release when available."
+
+title: "Piezoelectric Drum Transcription: Reproducible Code and Resources"
+
+type: software
+
+authors:
+  - family-names: "Sánchez"
+    given-names: "Rodrigo"
+
+  - family-names: "Arenas"
+    given-names: "Jorge P."
+
+  - family-names: "Poblete"
+    given-names: "Víctor"
+
+repository-code: "https://github.com/vpobleteacustica/piezoelectric-drum-transcription"
+
+license: MIT
+
+keywords:
+  - piezoelectric sensing
+  - vibration measurement
+  - automatic drum transcription
+  - onset detection
+  - music information retrieval
+  - reproducible research
