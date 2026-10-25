@@ -280,6 +280,70 @@ training runs, hardware platforms, or TensorFlow execution environments.
 The preserved checkpoint is the authoritative model artifact for reproducing
 the manuscript results.
 
+### Reconstructed training command
+
+The following command is a **reconstructed reproduction command**. It is derived from the canonical run configuration, preserved run artifacts, and the finalized compatible training launcher. It is not claimed to be the literal shell command executed on 2026-06-28.
+
+It assumes that the pinned ADTOF source has already been reconstructed with `third_party/adtof/patches/vibro5.patch`, that the finalized training launcher is available at `SCRIPTS/training/train_custom_split.py`, and that `DATASET_ROOT` points to the canonical 12,000-example dataset.
+
+```bash
+DATASET_ROOT="/path/to/CUSTOM_5CLASS_MULTIPROFILE_LOW_FULL"
+
+python SCRIPTS/training/train_custom_split.py \
+  --dataset-root "$DATASET_ROOT" \
+  --model-name Frame_RNN \
+  --batch-size 1 \
+  --training-sequence 64 \
+  --context 9 \
+  --sample-rate 100 \
+  --class-weights 1.0 1.0 1.2 1.5 1.7 \
+  --loss-type bce \
+  --epochs 60 \
+  --steps-per-epoch 600 \
+  --validation-steps 150 \
+  --output-dir RUNS \
+  --run-name rerun_serious_5class_low_60ep_weighted_t14t16 \
+  --save-checkpoints \
+  --threshold 0.5 \
+  --thresholds 0.005 0.0075 0.01 0.015 0.02 0.03 0.04 0.05 0.075 0.1 0.125 \
+  --onset-tolerance-ms 50 \
+  --onset-thresholds 0.005 0.0075 0.01 0.015 0.02 0.03 0.04 0.05 0.075 0.1 0.125 \
+  --calibrate-thresholds-on-val
+```
+
+Several details are intentional:
+
+- `--class-weights` reproduces the canonical KD/SD/T12/T14/T16 weighting
+  `[1.0, 1.0, 1.2, 1.5, 1.7]`;
+- `--loss-type bce` explicitly retains the binary-crossentropy behavior
+  corresponding to the canonical run, before focal-loss support was added;
+- `--same-padding` is intentionally omitted, matching the canonical
+  `same_padding=false` configuration;
+- `--no-val` is intentionally omitted;
+- `--save-checkpoints` is required to produce the best and final checkpoint
+  artifacts represented in the canonical run;
+- the threshold grid is supplied explicitly because the finalized launcher
+  has a different default grid from the one recorded by the canonical run;
+- `--calibrate-thresholds-on-val` activates VAL-based onset calibration and
+  onset evaluation in the finalized launcher.
+
+The calibration performed by this reconstructed training command corresponds
+to the historical training-run calibration path. It is **not** the
+authoritative postprocessing calibration used for the manuscript.
+
+The manuscript results use the later full-track VAL selection with:
+
+- checkpoint: `best`;
+- global threshold: `0.030`;
+- NMS: `110 ms`;
+- onset tolerance: `50 ms`; and
+- TEST reserved for final reporting after VAL-based selection.
+
+Because the training code does not set a global TensorFlow/Keras random seed,
+a fresh rerun is not expected to regenerate the canonical checkpoint
+byte-for-byte. The preserved checkpoint remains the authoritative model
+artifact for reproducing the manuscript results.
+
 ## 8. Canonical checkpoint
 
 The selected model checkpoint is preserved at:
