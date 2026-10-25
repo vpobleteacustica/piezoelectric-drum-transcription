@@ -258,6 +258,28 @@ For the reported experiment, the preserved run configuration, checkpoint,
 training history, postprocessing-selection artifacts, and final metrics remain
 the primary authorities.
 
+### Training determinism boundary
+
+The preserved ADTOF data-loading code uses fixed `random_state=0` values for
+the relevant sample-order shuffling operations. However, neither the finalized
+training launcher nor the underlying ADTOF model code sets a global
+TensorFlow/Keras random seed for neural-network initialization.
+
+Consequently, this repository distinguishes between two reproducibility
+targets:
+
+- **artifact reproducibility**: the exact canonical checkpoint, configuration,
+  selection artifacts, and reported metrics are preserved and can be audited;
+- **training-rerun reproducibility**: the architecture, dataset, split,
+  hyperparameters, class weights, optimizer/loss family, and evaluation
+  procedure can be reconstructed, but a fresh training run is not expected to
+  reproduce the canonical checkpoint byte-for-byte.
+
+Small numerical or optimization differences may therefore occur across fresh
+training runs, hardware platforms, or TensorFlow execution environments.
+The preserved checkpoint is the authoritative model artifact for reproducing
+the manuscript results.
+
 ## 8. Canonical checkpoint
 
 The selected model checkpoint is preserved at:

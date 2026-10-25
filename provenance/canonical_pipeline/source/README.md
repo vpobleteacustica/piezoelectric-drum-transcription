@@ -76,6 +76,12 @@ The canonical run artifacts remain authoritative for the run parameters,
 checkpoint identity, training history, VAL-only postprocessing selection, and
 TEST results.
 
+The ADTOF data-loading path uses fixed `random_state=0` values for the relevant
+sample-order shuffling operations, but no global TensorFlow/Keras random seed
+is set by the preserved training launcher or model implementation. A fresh
+training run should therefore be interpreted as a procedural rerun, not as a
+guarantee of byte-identical checkpoint reconstruction.
+
 Any publication-facing training command reconstructed from these materials
 must be labeled explicitly as a reconstructed reproduction command rather than
 as the original historical command.
