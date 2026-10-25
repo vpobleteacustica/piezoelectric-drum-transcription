@@ -1,0 +1,23 @@
+category,metric,value,notes
+Dataset size,Total WAV files,12000,"Across TRAIN, VAL and TEST"
+Dataset size,Total LABELS JSON files,12000,Rich event metadata
+Dataset size,Total ANNOTATIONS TXT files,12000,ADTOF-compatible onset annotations
+Pairing,Complete WAV/JSON/TXT triplets,12000,"One audio file, one JSON file and one TXT file per phrase"
+Pairing,Incomplete triplets,0,Should be zero
+Audio format,Observed sample rates,12000,Hz
+Audio format,Observed channels,1,1 = mono
+Audio format,Observed WAV subtypes,PCM_16,Expected PCM_16
+Phrase duration,Median duration,3.9333,"seconds, all splits pooled"
+Phrase duration,Duration range,2.9413–4.9684,"seconds, all splits pooled"
+Class balance,KD percentage,35.0006,"Mean percentage across TRAIN, VAL and TEST"
+Class balance,SD percentage,34.9979,"Mean percentage across TRAIN, VAL and TEST"
+Class balance,T12 percentage,10.0005,"Mean percentage across TRAIN, VAL and TEST"
+Class balance,T14 percentage,10.0005,"Mean percentage across TRAIN, VAL and TEST"
+Class balance,T16 percentage,10.0005,"Mean percentage across TRAIN, VAL and TEST"
+Annotation consistency,Same event count JSON/TXT,12000,Out of 12000 files
+Annotation consistency,Exact sequence after chronological sorting,12000,Out of 12000 files
+Annotation consistency,Sequence within 1 ms after sorting,12000,Out of 12000 files
+Temporal structure,Median events per phrase,11.0,All splits pooled
+Temporal structure,Events per phrase range,10–16,All splits pooled
+Temporal structure,Median close onset pairs ≤50 ms,3.0,All splits pooled
+Source traceability,Unique source WAV references,19733,References from phrase events to isolated-hit source files

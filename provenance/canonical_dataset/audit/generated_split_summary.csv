@@ -1,0 +1,4 @@
+split,n_wav,n_json,n_txt,audio_dir_exists,labels_dir_exists,annotations_dir_exists
+TRAIN,9600,9600,9600,True,True,True
+VAL,1200,1200,1200,True,True,True
+TEST,1200,1200,1200,True,True,True
