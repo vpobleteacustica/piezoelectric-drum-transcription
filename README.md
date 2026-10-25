@@ -106,4 +106,6 @@ The original thesis-development repository documents the historical replication 
 
 ## License
 
-The code in this repository is released under the MIT License. Dataset licensing will be specified separately in the archived dataset record.
+Original project code in this repository is released under the MIT License. Third-party material retains its own applicable license; see `THIRD_PARTY_NOTICES.md` and `third_party/adtof/README.md` for the ADTOF attribution and licensing information.
+
+Dataset licensing will be specified separately in the archived dataset record.
