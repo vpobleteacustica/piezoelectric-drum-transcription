@@ -462,3 +462,136 @@ separately archived canonical dataset.
 
 No dataset DOI should be cited until that archival record has been created and
 verified.
+
+## 14. Verified local full-track reproduction (2026-10-26)
+
+A local reproduction of the canonical full-track calibration was
+completed on 2026-10-26 using the preserved model checkpoints,
+verified patched ADTOF source, and regenerated dataset.
+The model was not retrained.
+
+The portable reproduction entry point is:
+
+    scripts/reproduce_canonical_fulltrack.py
+
+This procedure is reconstructed, not a literal historical command.
+
+### Reproduction command
+
+Use the compatible `adtof_rod` Python environment, including
+`h5py`, and the pinned, patched ADTOF checkout.
+
+From the repository root:
+
+    PYTHON="/path/to/adtof_rod/bin/python"
+    DATASET_ROOT="/absolute/path/to/regenerated_dataset"
+    ADTOF_ROOT="/absolute/path/to/patched_ADTOF"
+    OUTPUT_DIR="/absolute/path/to/new_fulltrack_outputs"
+
+    TF_USE_LEGACY_KERAS=True "$PYTHON" -u -B scripts/reproduce_canonical_fulltrack.py \
+      --dataset-root "$DATASET_ROOT" \
+      --adtof-root "$ADTOF_ROOT" \
+      --output-dir "$OUTPUT_DIR"
+
+The output directory must be outside the repository, dataset,
+and ADTOF checkout, and must be nonexistent or empty.
+Use `--dry-run` to check preparation without calibration.
+
+The wrapper verifies canonical and ADTOF hashes, creates
+temporary normalized HDF5 checkpoints, and preserves a
+`normalized_run/` bundle after successful calibration.
+
+### Verified scientific results
+
+| Parameter | Reproduced value |
+| --- | --- |
+| Checkpoint | best |
+| Global threshold | 0.030 |
+| NMS | 110 ms |
+| Onset tolerance | 50 ms |
+| Selection | VAL |
+| Final evaluation | TEST |
+
+| Metric | VAL | TEST |
+| --- | ---: | ---: |
+| Micro-F1 | 0.584740590 | 0.586318998 |
+| Macro-F1 | 0.586238080 | 0.585486978 |
+
+All 198 shared numeric fields of the historical and reproduced
+selected-inference configurations agreed within 1e-9.
+
+The historical configuration contains 121 additional numeric
+fields associated with supplementary TEST analysis without NMS.
+
+### Residual differences
+
+The only identified TP/FP/FN discrepancy in the NMS comparison
+is one additional historical false positive for T14 in TEST
+without NMS:
+
+| TEST without NMS | Historical | Reproduced |
+| --- | ---: | ---: |
+| TP | 10237 | 10237 |
+| FP | 19582 | 19581 |
+| FN | 3735 | 3735 |
+
+Its cause remains unknown.
+
+The historical checkpoint-selection artifact records threshold
+0.040, whereas the reproduced artifact records 0.030 with
+selected NMS. They reflect different calibration settings
+and must not be interpreted as equivalent protocols.
+
+### Evidence and limitations
+
+Local reproduction evidence was preserved outside Git in the
+sibling directory:
+
+    20261025_rodrigo_fulltrack_reproduction/
+
+It includes calibration outputs, the console log, normalized
+checkpoints, a verified 43-record SHA-256 manifest, an audit
+report, and a supplementary evidence seal.
+
+The successful scientific reproduction used wrapper SHA-256:
+
+    e64a7d2dcb61f063063a2517393745b67451c716c3ebc91f6c0b116d5cbb9a33
+
+An exact copy is preserved in
+`reproduction_wrapper_snapshot.py`.
+
+The subsequently safety-hardened wrapper had SHA-256:
+
+    fa203b126e4b71093a0610ed85543cca215b2fa08197fe818472c3c4626e8fd7
+
+Its output-directory protections passed six dry-run tests.
+The full evaluation was not repeated with this later version.
+
+Bytewise identity of regenerated WAVs with historical audio
+has not been demonstrated.
+
+At the time of the full-track reproduction, the regenerated
+12,000-example dataset resided under `/tmp`. Subsequently,
+its complete 36,003-file content was copied to the sibling
+persistent directory:
+
+    20261026_rodrigo_regenerated_dataset_preserved/
+
+Every preserved file was SHA-256 verified during copying and
+independently verified again against the file manifest:
+
+    20261025_rodrigo_fulltrack_reproduction/regenerated_dataset_file_manifest.json
+
+The manifest SHA-256 is:
+
+    1145a146383257030baa636d4ec298c8614ebd4e79e256cdaefd1c320680bf7f
+
+This post-reproduction manifest covers all 12,000 WAV files,
+12,000 TXT files, 12,002 JSON files, and one CSV file.
+
+The original 43-record reproduction manifest remains unchanged;
+it includes only the three dataset metadata files.
+
+Local preservation does not establish historical WAV identity
+or constitute a public archival deposit. Public dataset
+archiving, licensing, and a persistent identifier remain pending.
